@@ -3,6 +3,7 @@ package server
 import (
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/tessellated-io/pickaxe/log"
 )
@@ -19,15 +20,22 @@ func NewServer(staticContentDirectory string, logger *log.Logger) (*Server, erro
 	}, nil
 }
 
-func (s *Server) Start(port uint32) error {
+func (s *Server) Start(port int) error {
 	s.logger.Debug().Str("static_content_dir", s.staticContentDirectory).Msg("starting to serve static content")
 
 	fs := http.FileServer(http.Dir(s.staticContentDirectory))
 	http.Handle("/", fs)
-	err := http.ListenAndServe(fmt.Sprintf(":%d", port), nil)
+
+	server := &http.Server{
+		Addr:              fmt.Sprintf(":%d", port),
+		ReadHeaderTimeout: 3 * time.Second,
+	}
+
+	err := server.ListenAndServe()
+	s.logger.Info().Msg("🔌 Planetarium server terminated")
 	if err != nil {
 		return err
 	}
-	s.logger.Info().Msg("🔌 Planetarium server terminated")
+
 	return nil
 }

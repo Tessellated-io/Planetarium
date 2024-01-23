@@ -29,7 +29,7 @@ var startCommand = &cobra.Command{
 		}
 
 		go func() {
-			err = server.Start(uint32(serverPort))
+			err = server.Start(serverPort)
 			if err != nil {
 				logger.Error().Err(err).Msg("fatal error")
 				return
