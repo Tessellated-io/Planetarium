@@ -6,15 +6,23 @@ You can access it at [chain-registry.tessellated.io](https://chain-registry.tess
 
 ## Installing
 
+```shell
+$ git clone https://github.com/tessellated-io/planetarium # (Use --recursive if you want to pull chain-registry automatically).
+$ make install
+ 
+$ planetarium --help
 ```
-git clone https://github.com/tessellated-io/planetarium --recursive
-make install
+
+## Usage
+
+```shell
+$ planetarium start --port 8080 --file-path /home/user/chain-registry
 ```
 
 ## API 
 
-Files are exposed in the same way they are in the [Chain Registry](https://github.com/cosmos/chain-registry/). For instance, to find [`cosmoshub/chain.json`] you would simply `curl 127.0.0.1/cosmoshub.chain.json`.
+Files are exposed in the same way they are in the [Chain Registry](https://github.com/cosmos/chain-registry/). For instance, to find [`cosmoshub/chain.json`] you would simply `curl 127.0.0.1:5353/cosmoshub.chain.json`.
 
-## Updating
+## Updates
 
-By default everything is static. You can refresh this periodically by running `make refresh`. If you have a use case to refresh automatically, please file a feature request. 
+You specify the directory that contains the chain registry, and thus can configure it to update however you want (manually, via a cron job, etc)
