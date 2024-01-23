@@ -50,7 +50,7 @@ $ git clone https://github.com/eco-stake/validator-registry /home/user/validator
 ### Run Planetarium
 
 ```shell
-$ planetarium start --port 8080 --chain-registry-path /home/user/chain-registry --validator-registry /home/user/validator-registry
+$ planetarium start --chain-registry-directory /home/user/chain-registry/ -validator-registry-directory /home/user/validator-registry/ --port 8080
 ```
 
 ### Updating Registry Data
