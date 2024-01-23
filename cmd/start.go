@@ -14,16 +14,18 @@ import (
 	"github.com/tessellated-io/planetarium/server"
 )
 
+var serverPort int
+
 var (
-	serverPort int
-	filePath   string
+	chainRegistryDirectory     string
+	validatorRegistryDirectory string
 )
 
 var startCommand = &cobra.Command{
 	Use:   "start",
 	Short: startHelp,
 	Run: func(cmd *cobra.Command, args []string) {
-		server, err := server.NewServer(filePath, logger)
+		server, err := server.NewServer(chainRegistryDirectory, validatorRegistryDirectory, logger)
 		if err != nil {
 			logger.Error().Err(err).Msg("fatal error")
 			return
@@ -48,12 +50,18 @@ var startCommand = &cobra.Command{
 
 func init() {
 	startCommand.Flags().IntVarP(&serverPort, "port", "p", defaultListenPort, fmt.Sprintf("Listening port for the %s service", binaryName))
-	startCommand.Flags().StringVarP(&filePath, "file-path", "f", "", "Where to serve chain registry data from")
+	startCommand.Flags().StringVarP(&chainRegistryDirectory, "chain-registry-directory", "c", "", "Where to serve chain registry data from")
+	startCommand.Flags().StringVarP(&validatorRegistryDirectory, "validator-registry-directory", "v", "", "Where to serve validator registry data from")
 
 	// Mark the flag as required, forcing the user to provide a value
-	err := startCommand.MarkFlagRequired("file-path")
+	err := startCommand.MarkFlagRequired("chain-registry-directory")
 	if err != nil {
-		log.Fatal("must provide argument for --file-path (-f)")
+		log.Fatal("unable to mark --chain-registry-directory as required")
+		panic(err)
+	}
+	err = startCommand.MarkFlagRequired("validator-registry-directory")
+	if err != nil {
+		log.Fatal("unable to mark --validator-registry-directory as required")
 		panic(err)
 	}
 

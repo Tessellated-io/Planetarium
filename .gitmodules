@@ -2,3 +2,7 @@
 	path = chain-registry
 	url = https://github.com/cosmos/chain-registry
 	branch = master
+[submodule "validator-registry"]
+	path = validator-registry
+	url = https://github.com/eco-stake/validator-registry
+	branch = master
