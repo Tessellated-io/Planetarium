@@ -61,15 +61,18 @@ func (s *Server) Start(port int) error {
 	// Static content hosting for chains and validator registry
 	chainRegistryFileServer := http.FileServer(http.Dir(s.chainRegistryDirectory))
 	http.Handle(versionedChainsNamespace, http.StripPrefix(versionedChainsNamespace, chainRegistryFileServer))
+	http.Handle(fmt.Sprintf("%s/", versionedChainsNamespace), http.StripPrefix(fmt.Sprintf("%s/", versionedChainsNamespace), chainRegistryFileServer))
 	s.logger.Debug().Str("endpoint", versionedChainsNamespace).Msg("hosting chain registry")
 
 	validatorRegistryFileServer := http.FileServer(http.Dir(s.validatorRegistryDirectory))
 	http.Handle(versionedValidatorsNamespace, http.StripPrefix(versionedValidatorsNamespace, validatorRegistryFileServer))
+	http.Handle(fmt.Sprintf("%s/", versionedValidatorsNamespace), http.StripPrefix(fmt.Sprintf("%s/", versionedValidatorsNamespace), validatorRegistryFileServer))
 	s.logger.Debug().Str("endpoint", versionedValidatorsNamespace).Msg("hosting validator registry")
 
 	// Convenience endpoints
 	versionedAllChainsEndpoint := fmt.Sprintf("/%s/%s/%s", apiVersion, chainsNamespace, allChainsEndpoint)
 	http.HandleFunc(versionedAllChainsEndpoint, s.allChains)
+	http.HandleFunc(fmt.Sprintf("%s/", versionedAllChainsEndpoint), s.allChains)
 	s.logger.Debug().Str("endpoint", versionedAllChainsEndpoint).Msg("hosting all chains helper")
 
 	server := &http.Server{
