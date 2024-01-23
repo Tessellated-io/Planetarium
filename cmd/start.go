@@ -5,6 +5,7 @@ package cmd
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"os/signal"
 	"syscall"
@@ -48,5 +49,13 @@ var startCommand = &cobra.Command{
 func init() {
 	startCommand.Flags().IntVarP(&serverPort, "port", "p", defaultListenPort, fmt.Sprintf("Listening port for the %s service", binaryName))
 	startCommand.Flags().StringVarP(&filePath, "file-path", "f", "", "Where to serve chain registry data from")
+
+	// Mark the flag as required, forcing the user to provide a value
+	err := startCommand.MarkFlagRequired("file-path")
+	if err != nil {
+		log.Fatal("must provide argument for --file-path (-f)")
+		panic(err)
+	}
+
 	rootCmd.AddCommand(startCommand)
 }
