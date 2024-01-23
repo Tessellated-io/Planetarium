@@ -1,0 +1,4 @@
+[submodule "chain-registry"]
+	path = chain-registry
+	url = https://github.com/cosmos/chain-registry
+	branch = master
