@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/fs"
 	"net/http"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -23,6 +24,11 @@ const (
 )
 
 const allChainsEndpoint = "all"
+
+const (
+	healthyStatus   = "HEALTHY"
+	unhealthyStatus = "UNHEALTHY"
+)
 
 /** Type and constructor */
 
@@ -74,6 +80,12 @@ func (s *Server) Start(port int) error {
 	http.HandleFunc(versionedAllChainsEndpoint, s.allChains)
 	http.HandleFunc(fmt.Sprintf("%s/", versionedAllChainsEndpoint), s.allChains)
 	s.logger.Debug().Str("endpoint", versionedAllChainsEndpoint).Msg("hosting all chains helper")
+
+	// Health endpoint
+	versionedHealthEndpoint := fmt.Sprintf("/%s/health", apiVersion)
+	http.HandleFunc(versionedHealthEndpoint, s.health)
+	http.HandleFunc(fmt.Sprintf("%s/", versionedHealthEndpoint), s.health)
+	s.logger.Debug().Str("endpoint", versionedHealthEndpoint).Msg("hosting health helper")
 
 	server := &http.Server{
 		Addr:              fmt.Sprintf(":%d", port),
@@ -142,6 +154,78 @@ func (s *Server) allChains(w http.ResponseWriter, req *http.Request) {
 	// Serialize to json
 	w.Header().Set("Content-Type", "application/json")
 	err = json.NewEncoder(w).Encode(chains)
+	if err != nil {
+		s.logger.Error().Err(err).Str("method", requestMethod).Msg("🚨 error serializing json while handling request")
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	s.logger.Info().Str("method", requestMethod).Msg("💡 successfully handled request")
+}
+
+func (s *Server) health(w http.ResponseWriter, req *http.Request) {
+	requestMethod := "health"
+	s.logger.Info().Str("method", requestMethod).Msg("💻 handling request")
+
+	healthStatus := healthyStatus
+
+	// Determine age of git commits
+	chainAgeCmd := exec.Command("git", "log", "-1", "--format=%ct")
+	chainAgeCmd.Dir = s.chainRegistryDirectory
+	chainRegistryAge, err := chainAgeCmd.Output()
+	if err != nil {
+		s.logger.Error().Err(err).Msg("error retrieving git commit age for chain registry")
+		chainRegistryAge = []byte("")
+		healthStatus = unhealthyStatus
+	}
+
+	validatorAge := exec.Command("git", "log", "-1", "--format=%ct")
+	validatorAge.Dir = s.validatorRegistryDirectory
+	validatorRegistryAge, err := validatorAge.Output()
+	if err != nil {
+		s.logger.Error().Err(err).Msg("error retrieving git commit age for validator registry")
+		validatorRegistryAge = []byte("")
+		healthStatus = unhealthyStatus
+	}
+
+	// Determine git commit
+	chainCommitCmd := exec.Command("git", "rev-parse", "HEAD")
+	chainCommitCmd.Dir = s.chainRegistryDirectory
+	chainRegistryCommit, err := chainCommitCmd.Output()
+	if err != nil {
+		s.logger.Error().Err(err).Msg("error retrieving git commit for chain registry")
+		chainRegistryCommit = []byte("")
+		healthStatus = unhealthyStatus
+	}
+
+	validatorCommitCmd := exec.Command("git", "rev-parse", "HEAD")
+	validatorCommitCmd.Dir = s.validatorRegistryDirectory
+	validatorRegistryCommit, err := validatorCommitCmd.Output()
+	if err != nil {
+		s.logger.Error().Err(err).Msg("error retrieving git commit for validator registry")
+		validatorRegistryCommit = []byte("")
+		healthStatus = unhealthyStatus
+	}
+
+	// Write response
+	w.Header().Set("Content-Type", "application/json")
+
+	if healthStatus == healthyStatus {
+		w.WriteHeader(http.StatusOK) // http.StatusOK equals 200
+	} else {
+		w.WriteHeader(http.StatusInternalServerError)
+	}
+
+	response := map[string]string{
+		"status":                    healthStatus,
+		"chain_registry_commit":     strings.TrimSpace(string(chainRegistryCommit)),
+		"validator_registry_commit": strings.TrimSpace(string(validatorRegistryCommit)),
+		"chain_registry_age":        strings.TrimSpace(string(chainRegistryAge)),
+		"validator_registry_age":    strings.TrimSpace(string(validatorRegistryAge)),
+	}
+
+	// Serialize to json
+	err = json.NewEncoder(w).Encode(response)
 	if err != nil {
 		s.logger.Error().Err(err).Str("method", requestMethod).Msg("🚨 error serializing json while handling request")
 		http.Error(w, err.Error(), http.StatusInternalServerError)
