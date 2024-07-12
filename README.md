@@ -9,7 +9,7 @@
 ---
 Planetarium is a small server for the [Cosmos Chain Registry](https://github.com/cosmos/chain-registry) and [EcoStake Validator Registry](https://github.com/eco-stake/validator-registry).
 
-Planetarium is aimed to be simple, easy to deploy, and manage updates. Tessellated provides a hosted implementation of this API, which you can find at [planetarium.tessellated.io](https://planetarium.tessellated.io).
+Planetarium is aimed to be simple, easy to deploy, and manage updates. Tessellated provides a hosted implementation of this API, which you can find at [planetarium.tessellated.io](https://planetarium.services.tessellated.io).
 
 ## API 
 
