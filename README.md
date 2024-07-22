@@ -17,7 +17,7 @@ Planetarium has two namespaces:
 - `/v1/chains`: For information from the chain registry
 - `/v1/validators`: For information from the validator registry
 
-In most cases, the existing file structure of the validator and chain registry are provided as-is. For instance, to find [`cosmoshub/chain.json`](https://github.com/cosmos/chain-registry/blob/0995e7859e47136a7cb98d97c0e93739f268b091/cosmoshub/chain.json) you would simply `curl planetarium.tessellated.io/v1/chains/cosmoshub/chain.json`. Likewise, to find [`tessellated/profile.json`](https://github.com/eco-stake/validator-registry/blob/e1a994fdd93af96d021fe14bd52815c2adb793cf/tessellated/profile.json) from the validator registry: ``curl planetarium.tessellated.io/v1/validators/tessellated/profile.json``.
+In most cases, the existing file structure of the validator and chain registry are provided as-is. For instance, to find [`cosmoshub/chain.json`](https://github.com/cosmos/chain-registry/blob/0995e7859e47136a7cb98d97c0e93739f268b091/cosmoshub/chain.json) you would simply `curl planetarium.services.tessellated.io/v1/chains/cosmoshub/chain.json`. Likewise, to find [`tessellated/profile.json`](https://github.com/eco-stake/validator-registry/blob/e1a994fdd93af96d021fe14bd52815c2adb793cf/tessellated/profile.json) from the validator registry: ``curl planetarium.services.tessellated.io/v1/validators/tessellated/profile.json``.
 
 These additional routes are provided for convenience:
 - **`/v1/chains/all`**: List all chains
