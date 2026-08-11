@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/fs"
 	"net/http"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -26,6 +27,11 @@ const (
 const allChainsEndpoint = "all"
 
 const (
+	chainByIDEndpoint = "id"
+	chainFileName     = "chain.json"
+)
+
+const (
 	healthyStatus   = "HEALTHY"
 	unhealthyStatus = "UNHEALTHY"
 )
@@ -36,6 +42,14 @@ type Server struct {
 	logger                     *log.Logger
 	chainRegistryDirectory     string
 	validatorRegistryDirectory string
+
+	// Maps chain ids (ex. "cosmoshub-4") to chain registry directory names (ex. "cosmoshub")
+	chainIDCache map[string]string
+}
+
+// chainInfo models the fields of a chain registry chain.json that the server reads.
+type chainInfo struct {
+	ChainID string `json:"chain_id"`
 }
 
 func NewServer(chainRegistryDirectory, validatorRegistryDirectory string, logger *log.Logger) (*Server, error) {
@@ -49,11 +63,67 @@ func NewServer(chainRegistryDirectory, validatorRegistryDirectory string, logger
 		normalizedValidatorRegistryDirectory = filepath.Dir(validatorRegistryDirectory)
 	}
 
+	// Registry data only changes across server restarts, so the cache is built once and never invalidated
+	chainIDCache, err := buildChainIDCache(normalizedChainRegistryDirectory, logger)
+	if err != nil {
+		return nil, err
+	}
+
 	return &Server{
 		chainRegistryDirectory:     normalizedChainRegistryDirectory,
 		validatorRegistryDirectory: normalizedValidatorRegistryDirectory,
+		chainIDCache:               chainIDCache,
 		logger:                     logger,
 	}, nil
+}
+
+// buildChainIDCache maps chain ids to chain registry directory names. Testnet chains are excluded, matching
+// the behavior of the all chains endpoint.
+func buildChainIDCache(chainRegistryDirectory string, logger *log.Logger) (map[string]string, error) {
+	cache := make(map[string]string)
+
+	directoryEntries, err := os.ReadDir(chainRegistryDirectory)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, directoryEntry := range directoryEntries {
+		if !directoryEntry.IsDir() {
+			continue
+		}
+
+		chainName := directoryEntry.Name()
+		isHidden := strings.HasPrefix(chainName, ".")
+		isMetadata := strings.HasPrefix(chainName, "_")
+		isTestnet := strings.EqualFold("testnets", chainName)
+		if isHidden || isMetadata || isTestnet {
+			continue
+		}
+
+		chainFile := filepath.Join(chainRegistryDirectory, chainName, chainFileName)
+		chainFileContents, err := os.ReadFile(chainFile)
+		if err != nil {
+			logger.Warn().Str("chain", chainName).Err(err).Msg("excluding chain with unreadable chain.json from chain id cache")
+			continue
+		}
+
+		chainData := &chainInfo{}
+		err = json.Unmarshal(chainFileContents, chainData)
+		if err != nil {
+			logger.Warn().Str("chain", chainName).Err(err).Msg("excluding chain with malformed chain.json from chain id cache")
+			continue
+		}
+
+		if chainData.ChainID == "" {
+			logger.Warn().Str("chain", chainName).Msg("excluding chain with missing chain_id from chain id cache")
+			continue
+		}
+
+		cache[chainData.ChainID] = chainName
+	}
+
+	logger.Debug().Int("num_chains", len(cache)).Msg("built chain id cache")
+	return cache, nil
 }
 
 /** Public API */
@@ -80,6 +150,11 @@ func (s *Server) Start(port int) error {
 	http.HandleFunc(versionedAllChainsEndpoint, s.allChains)
 	http.HandleFunc(fmt.Sprintf("%s/", versionedAllChainsEndpoint), s.allChains)
 	s.logger.Debug().Str("endpoint", versionedAllChainsEndpoint).Msg("hosting all chains helper")
+
+	versionedChainByIDEndpoint := fmt.Sprintf("/%s/%s/%s", apiVersion, chainsNamespace, chainByIDEndpoint)
+	http.HandleFunc(versionedChainByIDEndpoint, s.chainByID)
+	http.HandleFunc(fmt.Sprintf("%s/", versionedChainByIDEndpoint), s.chainByID)
+	s.logger.Debug().Str("endpoint", versionedChainByIDEndpoint).Msg("hosting chain by id helper")
 
 	// Health endpoint
 	versionedHealthEndpoint := fmt.Sprintf("/%s/health", apiVersion)
@@ -159,6 +234,37 @@ func (s *Server) allChains(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	s.logger.Info().Str("method", requestMethod).Msg("💡 successfully handled request")
+}
+
+func (s *Server) chainByID(w http.ResponseWriter, req *http.Request) {
+	requestMethod := "chain_by_id"
+	s.logger.Info().Str("method", requestMethod).Msg("💻 handling request")
+
+	// Requests are formatted as /v1/chains/id/<chain-id>[/<file>], where <file> defaults to chain.json
+	prefix := fmt.Sprintf("/%s/%s/%s", apiVersion, chainsNamespace, chainByIDEndpoint)
+	requestPath := strings.Trim(strings.TrimPrefix(req.URL.Path, prefix), "/")
+	chainID, filePath, hasFilePath := strings.Cut(requestPath, "/")
+	if !hasFilePath || filePath == "" {
+		filePath = chainFileName
+	}
+
+	if chainID == "" {
+		s.logger.Info().Str("method", requestMethod).Msg("request is missing a chain id")
+		http.Error(w, "missing chain id", http.StatusBadRequest)
+		return
+	}
+
+	chainName, found := s.chainIDCache[chainID]
+	if !found {
+		s.logger.Info().Str("method", requestMethod).Str("chain_id", chainID).Msg("no chain found for requested chain id")
+		http.NotFound(w, req)
+		return
+	}
+
+	redirectPath := fmt.Sprintf("/%s/%s/%s/%s", apiVersion, chainsNamespace, chainName, filePath)
+	http.Redirect(w, req, redirectPath, http.StatusFound)
 
 	s.logger.Info().Str("method", requestMethod).Msg("💡 successfully handled request")
 }

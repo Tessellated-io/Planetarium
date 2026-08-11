@@ -21,6 +21,7 @@ In most cases, the existing file structure of the validator and chain registry a
 
 These additional routes are provided for convenience:
 - **`/v1/chains/all`**: List all chains
+- **`/v1/chains/id/<chain-id>`**: Look up a chain by chain id. Returns a `302` redirect to the chain's `chain.json` (ex. `/v1/chains/id/cosmoshub-4` redirects to `/v1/chains/cosmoshub/chain.json`). Other files can be requested by appending them to the path (ex. `/v1/chains/id/cosmoshub-4/assetlist.json`). Testnet chains are not included.
 
 ## Installing
 
