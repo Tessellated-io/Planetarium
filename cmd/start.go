@@ -11,6 +11,7 @@ import (
 	"syscall"
 
 	"github.com/spf13/cobra"
+
 	"github.com/tessellated-io/planetarium/server"
 )
 
