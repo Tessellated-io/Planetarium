@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/fs"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -263,7 +264,12 @@ func (s *Server) chainByID(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	redirectPath := fmt.Sprintf("/%s/%s/%s/%s", apiVersion, chainsNamespace, chainName, filePath)
+	// filePath comes from the request. Escape each segment so it can only ever name a file under the chain's directory.
+	segments := strings.Split(filePath, "/")
+	for i, segment := range segments {
+		segments[i] = url.PathEscape(segment)
+	}
+	redirectPath := fmt.Sprintf("/%s/%s/%s/%s", apiVersion, chainsNamespace, chainName, strings.Join(segments, "/"))
 	http.Redirect(w, req, redirectPath, http.StatusFound)
 
 	s.logger.Info().Str("method", requestMethod).Msg("💡 successfully handled request")
