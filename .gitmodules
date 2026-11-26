@@ -6,3 +6,6 @@
 	path = validator-registry
 	url = https://github.com/eco-stake/validator-registry
 	branch = master
+[submodule "tools"]
+	path = tools
+	url = https://github.com/tessellated-io/go-tooling
