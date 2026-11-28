@@ -4,7 +4,7 @@ go 1.21.6
 
 require (
 	github.com/spf13/cobra v1.8.0
-	github.com/tessellated-io/pickaxe v1.1.5
+	github.com/tessellated-io/pickaxe v1.2.4
 )
 
 require (
